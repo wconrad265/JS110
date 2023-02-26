@@ -53,13 +53,13 @@ function joinOr(arr, delimiter  = ', ', end = 'or') {
   return `${arr.slice(0, arr.length - 1).join(delimiter)} ${end} ${arr.slice(-1)}` ;
 }
 
-console.log(joinOr([1, 2, 3]));               // => "1, 2, or 3"
-console.log(joinOr([1, 2, 3], '; '));         // => "1; 2; or 3"
-console.log(joinOr([1, 2, 3], ', ', 'and'));  // => "1, 2, and 3"
-console.log(joinOr([]));                      // => ""
-console.log(joinOr([5]));                     // => "5"
-console.log(joinOr([1, 2]));                  // => "1 or 2"
-console.log(joinOr([1, 2], 'X ', 'and'));                // => "1 or 2"
+// console.log(joinOr([1, 2, 3]));               // => "1, 2, or 3"
+// console.log(joinOr([1, 2, 3], '; '));         // => "1; 2; or 3"
+// console.log(joinOr([1, 2, 3], ', ', 'and'));  // => "1, 2, and 3"
+// console.log(joinOr([]));                      // => ""
+// console.log(joinOr([5]));                     // => "5"
+// console.log(joinOr([1, 2]));                  // => "1 or 2"
+// console.log(joinOr([1, 2], 'X ', 'and'));                // => "1 or 2"
 
 
 
@@ -93,3 +93,14 @@ console.log(joinOr([1, 2], 'X ', 'and'));                // => "1 or 2"
   - When one person reaches 2 match wins
     - output, they have won the match
 */
+
+console.log(f("Myself2 Me1 I4 and3"));
+
+function f(str) {
+  return str.split(' ').map((ele) => {
+    let num = +ele.match(/[0-9]/g);
+    ele = ele.replace(/[0-9]/gi, '');
+
+    return [ele, num];
+  }).sort((a, z) => a[1] - z[1]).map((ele) => ele[0]).join(' ');
+}
