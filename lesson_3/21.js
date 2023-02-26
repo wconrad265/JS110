@@ -61,6 +61,13 @@ function initializeScores() {
   };
 }
 
+function initalizePerson() {
+  return {
+    hand: [],
+    total: 0
+  };
+}
+
 function createShuffledDeck() {
   let cardsCopy = JSON.parse(JSON.stringify(CARDS));
   let playingDeck = Array.from({ length: 4 }, () => cardsCopy).flat();
@@ -81,27 +88,27 @@ function dealCard(person, playingDeck) {
   person.push(playingDeck.pop());
 }
 
-function dealInitialHand(playerHand, dealerHand, playingDeck) {
-  dealCard(playerHand, playingDeck);
-  dealCard(playerHand, playingDeck);
+function dealInitialHand(player, dealer, playingDeck) {
+  dealCard(player.hand, playingDeck);
+  dealCard(player.hand, playingDeck);
 
-  dealCard(dealerHand, playingDeck);
-  dealCard(dealerHand, playingDeck);
+  dealCard(dealer.hand, playingDeck);
+  dealCard(dealer.hand, playingDeck);
 }
 
 function combineHand(hand) {
   return joinOr(hand.map((card) => card[0]), ', ','and');
 }
 
-function outputPlayerHand(playerHand, playerTotal) {
-  prompt(`You have: ${combineHand(playerHand)} for a total of ${playerTotal}\n`);
+function outputPlayerHand(player) {
+  prompt(`You have: ${combineHand(player.hand)} for a total of ${player.total}\n`);
 }
 
-function outputDealerFirstCard(dealerHand) {
-  prompt(`Dealer has: ${dealerHand[0][0]} and unknown card`);
+function outputDealerFirstCard(dealer) {
+  prompt(`Dealer has: ${dealer.hand[0][0]} and unknown card`);
 }
 
-function total(hand) {
+function calculateTotal(hand) {
   if (hand.some((card) => card[0] === 'Ace')) {
     let total = calculateWithoutAce(hand);
     let acesInHand =  filterAces(hand);
@@ -123,26 +130,52 @@ function filterAces(hand) {
   return hand.filter((card) => card[0] === 'Ace');
 }
 
-function playerTurn(playerHand, playingDeck, dealerHand, scores) {
-  let playerTotal = total(playerHand);
+function playerTurn(player, playingDeck, dealer, scores) {
+  player.total = calculateTotal(player.hand);
 
   while (true) {
-    let answer = getUserInput(playerHand, playerTotal, dealerHand, scores);
+    let answer = getUserInput(player, dealer, scores);
 
-    playerTotal = playerHit(answer, playerHand, playerTotal, playingDeck);
+    playerHit(answer, player, playingDeck);
 
-    if (STAY.includes(answer) || busted(playerTotal)) break;
+    if (STAY.includes(answer) || busted(player)) break;
   }
-  return playerTotal;
 }
 
-function getUserInput(playerHand, playerTotal, dealerHand, scores) {
-  playerInputMessage(playerHand, playerTotal, dealerHand, scores);
+function getUserInput(player, dealer, scores) {
+  playerInputMessage(player, dealer, scores);
   let answer = readline.question().toLowerCase();
 
-  answer = playerInputError(answer, playerHand, playerTotal, dealerHand,
-    scores);
+  answer = playerInputError(answer, player, dealer, scores);
 
+  return answer;
+}
+
+function playerInputMessage(player, dealer, scores) {
+  console.clear();
+  winCountPrint(scores);
+  outputDealerFirstCard(dealer);
+  displayPlayerHitCards(player);
+  prompt("hit or stay? (h/s)");
+}
+
+function displayPlayerHitCards(player) {
+  if (player.hand.length > 2) {
+    console.log('');
+    prompt('You chose to hit!');
+    prompt(`Your cards are now: ${combineHand(player.hand)}`);
+    prompt(`Your total is now: ${player.total}\n`);
+  } else {
+    outputPlayerHand(player);
+  }
+}
+
+function playerInputError(answer, player, dealer, scores) {
+  while (!HIT_OR_STAY.includes(answer)) {
+    playerInputMessage(player, dealer, scores);
+    playerInputErrorMessage();
+    answer = readline.question().toLowerCase();
+  }
   return answer;
 }
 
@@ -150,81 +183,67 @@ function playerInputErrorMessage() {
   promptError('Invalid input detected');
 }
 
-function playerInputMessage(playerHand, playerTotal, dealerHand, scores) {
-  console.clear();
-  winCountPrint(scores);
-  outputDealerFirstCard(dealerHand);
-  displayPlayerCards(playerHand, playerTotal);
-  prompt("hit or stay? (h/s)");
-}
-
-function displayPlayerCards(playerHand, playerTotal) {
-  if (playerHand.length > 2) {
-    console.log('');
-    prompt('You chose to hit!');
-    prompt(`Your cards are now: ${combineHand(playerHand)}`);
-    prompt(`Your total is now: ${playerTotal}\n`);
-  } else {
-    outputPlayerHand(playerHand, playerTotal);
-  }
-}
-
-function playerInputError(answer, playerHand, playerTotal, dealerHand, scores) {
-  while (!HIT_OR_STAY.includes(answer)) {
-    playerInputMessage(playerHand, playerTotal, dealerHand, scores);
-    playerInputErrorMessage();
-    answer = readline.question().toLowerCase();
-  }
-  return answer;
-}
-
-function playerHit(answer, playerHand, playerTotal, playingDeck) {
+function playerHit(answer, player, playingDeck) {
   if (HIT.includes(answer)) {
-    dealCard(playerHand, playingDeck);
-    return total(playerHand);
+    dealCard(player.hand, playingDeck);
+    player.total = calculateTotal(player.hand);
   }
-  return playerTotal;
 }
 
-function busted(playerTotal) {
-  return playerTotal > NUMBER_LIMIT;
+function busted(player) {
+  return player.total > NUMBER_LIMIT;
 }
 
-function dealerTurn(dealerHand, playingDeck) {
-  let dealerTotal = total(dealerHand);
+function dealerTurn(dealer, playingDeck) {
+  dealer.total = calculateTotal(dealer.hand);
 
-  while (dealerTotal < DEALER_STOP) {
-    dealCard(dealerHand, playingDeck);
-    dealerTotal = total(dealerHand);
+  while (dealer.total < DEALER_STOP) {
+    dealCard(dealer.hand, playingDeck);
+    dealer.total = calculateTotal(dealer.hand);
   }
-  return dealerTotal;
 }
 
-function outputInformation(dealerHand, dealerTotal, playerHand, playerTotal,
-  scores, winner) {
+function findWinnder(player, dealer) {
+  if (player.total > NUMBER_LIMIT) return 'playerBust';
+
+  if (dealer.total > NUMBER_LIMIT) return 'dealerBust';
+
+  if (player.total === dealer.total) return 'tie';
+
+  return (player.total > dealer.total) ? 'player' : 'dealer';
+}
+
+function winCountPrint(scores) {
+  promptScoreBoard(` _______________________`);
+
+  promptScoreBoard(`|      SCOREBOARD      |`);
+  dashBreak();
+
+  promptScoreBoard(`| Round: ${scores.roundsCompleted}             |`);
+  dashBreak();
+  promptScoreBoard(`| Current Rounds Won   |`);
+  dashBreak();
+
+  promptScoreBoard(`| User: ${scores.player}              |`);
+  promptScoreBoard(`| Computer: ${scores.dealer}          |`);
+
+  promptScoreBoard(`|______________________|\n`);
+}
+
+function outputInformation(dealer, player, scores, winner) {
 
   if (winner === 'playerBust') {
     console.clear();
     winCountPrint(scores);
-    outputDealerFirstCard(dealerHand);
-    outputPlayerHand(playerHand, playerTotal);
+    outputDealerFirstCard(dealer);
+    outputPlayerHand(player);
 
   } else {
     console.clear();
     winCountPrint(scores);
-    prompt(`Dealer has: ${combineHand(dealerHand)} for a total of ${dealerTotal}`);
-    outputPlayerHand(playerHand, playerTotal);
+    prompt(`Dealer has: ${combineHand(dealer.hand)} for a total of ${dealer.total}`);
+    outputPlayerHand(player);
   }
-}
-
-function findWinnder(playerTotal, dealerTotal) {
-  if (playerTotal > NUMBER_LIMIT) return 'playerBust';
-
-  if (dealerTotal > NUMBER_LIMIT) return 'dealerBust';
-
-  if (playerTotal === dealerTotal) return 'tie';
-
-  return (playerTotal > dealerTotal) ? 'player' : 'dealer';
 }
 
 function chooseToStayMessage() {
@@ -232,27 +251,29 @@ function chooseToStayMessage() {
   prompt('You choose to stay');
 }
 
-function playerBustedMessage(playerHand, playerTotal) {
-  displayPlayerCards(playerHand, playerTotal);
-  promptError(`You busted, your hand of ${combineHand(playerHand)} for a total of ${playerTotal}.\n`);
+function playerBustedMessage(player) {
+  displayPlayerHitCards(player);
+  promptError(`You busted.`);
+  promptError('Dealer Wins\n');
 }
 
-function dealerBustMessage(dealerTotal, dealerHand) {
+function dealerBustMessage(dealer) {
   chooseToStayMessage();
   console.log('');
-  promptError(`The dealer has busted with ${combineHand(dealerHand)}, with a value of ${dealerTotal}.\n`);
+  promptWin(`The dealer has busted with ${combineHand(dealer.hand)}, for a total of ${dealer.total}.`);
+  promptWin('You win!\n');
 }
 
-function dealerWinMessage(dealerTotal, dealerHand) {
+function dealerWinMessage(dealer) {
   chooseToStayMessage();
   console.log('');
-  promptError(`Dealer won with: ${combineHand(dealerHand)} for a total of ${dealerTotal}.\n`);
+  promptError(`Dealer won with: ${combineHand(dealer.hand)} for a total of ${dealer.total}.\n`);
 }
 
-function playerWinMessage(playerHand, playerTotal) {
+function playerWinMessage(player) {
   chooseToStayMessage();
   console.log('');
-  promptWin(`You won with ${combineHand(playerHand)} for a total of ${playerTotal}.\n`);
+  promptWin(`You won with ${combineHand(player.hand)} for a total of ${player.total}.\n`);
 }
 
 function tieMessage() {
@@ -260,21 +281,20 @@ function tieMessage() {
   prompt('It is a tie');
 }
 
-function displayWinner(playerHand, playerTotal, dealerHand, dealerTotal,
-  winner) {
+function displayWinner(player, dealer, winner) {
 
   switch (winner) {
     case 'playerBust':
-      playerBustedMessage(playerHand, playerTotal);
+      playerBustedMessage(player);
       break;
     case 'dealerBust':
-      dealerBustMessage(dealerTotal, dealerHand);
+      dealerBustMessage(dealer);
       break;
     case 'player':
-      playerWinMessage(playerHand, playerTotal);
+      playerWinMessage(player);
       break;
     case 'dealer':
-      dealerWinMessage(dealerTotal, dealerHand);
+      dealerWinMessage(dealer);
       break;
     case 'tie':
       tieMessage();
@@ -306,23 +326,6 @@ function playAgainError(answer) {
     answer = readline.question().toLowerCase();
   }
   return answer;
-}
-
-function winCountPrint(scores) {
-  promptScoreBoard(` _______________________`);
-
-  promptScoreBoard(`|      SCOREBOARD      |`);
-  dashBreak();
-
-  promptScoreBoard(`| Round: ${scores.roundsCompleted}             |`);
-  dashBreak();
-  promptScoreBoard(`| Current Rounds Won   |`);
-  dashBreak();
-
-  promptScoreBoard(`| User: ${scores.player}              |`);
-  promptScoreBoard(`| Computer: ${scores.dealer}          |`);
-
-  promptScoreBoard(`|______________________|\n`);
 }
 
 function updateScores(scores, winner) {
@@ -365,31 +368,30 @@ function thankYouMessage() {
   prompt('Thank you for playing');
 }
 
-function TwentyOneGame(playerHand, dealerHand, playingDeck, scores) {
-  dealInitialHand(playerHand, dealerHand, playingDeck);
+function TwentyOneGame(player, dealer, playingDeck, scores) {
+  dealInitialHand(player, dealer, playingDeck);
 
-  let playerTotal = playerTurn(playerHand, playingDeck, dealerHand,scores);
+  playerTurn(player, playingDeck, dealer, scores);
 
-  let dealerTotal = dealerTurn(dealerHand, playingDeck);
+  dealerTurn(dealer, playingDeck);
 
-  let winner = findWinnder(playerTotal, dealerTotal);
+  const winner = findWinnder(player, dealer);
 
   updateScores(scores, winner);
 
-  outputInformation(dealerHand, dealerTotal,playerHand, playerTotal,
-    scores, winner);
+  outputInformation(dealer, player, scores, winner);
 
-  displayWinner(playerHand, playerTotal, dealerHand, dealerTotal, winner);
+  displayWinner(player, dealer, winner);
 }
 
 function gameLoop(scores) {
   while (true) {
-    let dealerHand = [];
-    let playerHand = [];
+    const dealer = initalizePerson();
+    const player = initalizePerson();
 
-    let playingDeck = createShuffledDeck();
+    const playingDeck = createShuffledDeck();
 
-    TwentyOneGame(playerHand, dealerHand, playingDeck, scores);
+    TwentyOneGame(player, dealer, playingDeck, scores);
 
     if (winMatchCheck(scores)) break;
 
@@ -398,7 +400,6 @@ function gameLoop(scores) {
 }
 
 function programLoop() {
-
   while (true) {
     const scores = initializeScores();
 
