@@ -14,7 +14,7 @@ const prompt = (msg) => console.log('\x1b[37m%s\x1b[0m', `=> ${msg}`);        //
 const promptError = (msg) => console.log('\x1b[31m%s\x1b[0m', `=> ${msg}`);   // red
 const promptScoreBoard = (msg) => console.log('\x1b[36m%s\x1b[0m', `${msg}`); // cyan
 const promptWin = (msg) => console.log('\x1b[33m%s\x1b[0m', `=> ${msg}`);     // yellow
-const dashBreak = () => promptScoreBoard('|----------------------|');
+const dashBreak = () => promptScoreBoard('|----------------------|           |--------------------------------|');
 const promtWinGame = (msg) => console.log('\x1b[32m%s\x1b[0m', `=> ${msg}`);  // green
 
 function clearLastLines(count) {
@@ -33,7 +33,7 @@ function welcomeMessage() {
   console.log('');
   asciiArt();
   prompt('Welcome to 21!\n');
-  prompt('The first player or dealer to win 3 rounds will, win the match.');
+  prompt('The first player or dealer to win 3 rounds of 21, will win the game.');
   prompt('Press enter to begin.');
   readline.question();
 }
@@ -203,7 +203,7 @@ function dealerTurn(dealer, playingDeck) {
   }
 }
 
-function findWinnder(player, dealer) {
+function findWinner(player, dealer) {
   if (player.total > NUMBER_LIMIT) return 'playerBust';
 
   if (dealer.total > NUMBER_LIMIT) return 'dealerBust';
@@ -214,18 +214,18 @@ function findWinnder(player, dealer) {
 }
 
 function winCountPrint(scores) {
-  promptScoreBoard(` _______________________`);
+  promptScoreBoard(` ______________________             ________________________________`);
 
-  promptScoreBoard(`|      SCOREBOARD      |`);
+  promptScoreBoard(`|      SCOREBOARD      |           |        Card       |   Values   |`);
   dashBreak();
 
-  promptScoreBoard(`| Round: ${scores.roundsCompleted}             |`);
+  promptScoreBoard(`| Round: ${scores.roundsCompleted}             |           |      2 - 10       | face value |`);
   dashBreak();
-  promptScoreBoard(`| Current Rounds Won   |`);
+  promptScoreBoard(`| Current Rounds Won   |           | Jack, Queen, King |     10     |`);
   dashBreak();
 
-  promptScoreBoard(`| User: ${scores.player}              |`);
-  promptScoreBoard(`| Computer: ${scores.dealer}          |`);
+  promptScoreBoard(`| User: ${scores.player}              |           |         Ace       |   1 or 11  |`);
+  promptScoreBoard(`| Computer: ${scores.dealer}          |           |________________________________|`);
 
   promptScoreBoard(`|______________________|\n`);
 }
@@ -244,6 +244,27 @@ function outputInformation(dealer, player, scores, winner) {
     prompt(`Dealer has: ${combineHand(dealer.hand)} for a total of ${dealer.total}`);
     outputPlayerHand(player);
   }
+}
+
+function updateScores(scores, winner) {
+  switch (winner) {
+    case 'playerBust':
+      scores.dealer += 1;
+      break;
+    case 'dealerBust':
+      scores.player += 1;
+      break;
+    case 'player':
+      scores.player += 1;
+      break;
+    case 'dealer':
+      scores.dealer += 1;
+      break;
+  }
+}
+
+function updateRounds(scores) {
+  scores.roundsCompleted += 1;
 }
 
 function chooseToStayMessage() {
@@ -302,6 +323,23 @@ function displayWinner(player, dealer, winner) {
   }
 }
 
+function playNextRound() {
+  prompt(`Press enter to play next round`);
+  readline.question();
+}
+
+function winGameCheck(scores) {
+  return (scores.player === ROUNDS_WIN) || (scores.dealer === ROUNDS_WIN);
+}
+
+function winGameMessage(scores) {
+  if (scores.player === ROUNDS_WIN) {
+    promtWinGame(`You are the first to win ${ROUNDS_WIN} rounds, and have won the game!\n`);
+  } else if (scores.dealer === ROUNDS_WIN) {
+    promtWinGame(`The Dealer was the first to win ${ROUNDS_WIN} rounds, and has won the game!\n`);
+  }
+}
+
 function playAgain() {
   playAgainMessage();
   let answer = readline.question().toLowerCase();
@@ -311,7 +349,7 @@ function playAgain() {
 }
 
 function playAgainMessage () {
-  prompt('Do you want to play another match? (y/n)');
+  prompt('Do you want to play another game of 21? (y/n)');
 }
 
 function playAgainErrorMessage() {
@@ -328,44 +366,9 @@ function playAgainError(answer) {
   return answer;
 }
 
-function updateScores(scores, winner) {
-  switch (winner) {
-    case 'playerBust':
-      scores.dealer += 1;
-      break;
-    case 'dealerBust':
-      scores.player += 1;
-      break;
-    case 'player':
-      scores.player += 1;
-      break;
-    case 'dealer':
-      scores.dealer += 1;
-      break;
-  }
-  scores.roundsCompleted += 1;
-}
-
-function playNextRound() {
-  prompt(`Press enter to play next round`);
-  readline.question();
-}
-
-function winMatchCheck(scores) {
-  return (scores.player === ROUNDS_WIN) || (scores.dealer === ROUNDS_WIN);
-}
-
-function winMatchMessage(scores) {
-  if (scores.player === ROUNDS_WIN) {
-    promtWinGame(`You are the first to win ${ROUNDS_WIN} rounds, and have won the match!\n`);
-  } else if (scores.dealer === ROUNDS_WIN) {
-    promtWinGame(`The Dealer was the first to win ${ROUNDS_WIN} rounds, and has won the match!\n`);
-  }
-}
-
 function thankYouMessage() {
   console.log('');
-  prompt('Thank you for playing');
+  prompt('Thank you for playing!');
 }
 
 function TwentyOneGame(player, dealer, playingDeck, scores) {
@@ -375,13 +378,15 @@ function TwentyOneGame(player, dealer, playingDeck, scores) {
 
   dealerTurn(dealer, playingDeck);
 
-  const winner = findWinnder(player, dealer);
+  const winner = findWinner(player, dealer);
 
   updateScores(scores, winner);
 
   outputInformation(dealer, player, scores, winner);
 
   displayWinner(player, dealer, winner);
+
+  updateRounds(scores);
 }
 
 function gameLoop(scores) {
@@ -393,7 +398,7 @@ function gameLoop(scores) {
 
     TwentyOneGame(player, dealer, playingDeck, scores);
 
-    if (winMatchCheck(scores)) break;
+    if (winGameCheck(scores)) break;
 
     playNextRound();
   }
@@ -407,7 +412,7 @@ function programLoop() {
 
     gameLoop(scores);
 
-    winMatchMessage(scores);
+    winGameMessage(scores);
 
     if (playAgain()) break;
   }
