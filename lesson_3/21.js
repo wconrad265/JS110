@@ -30,9 +30,10 @@ function joinOr(arr, delimiter  = ', ', end = 'or') {
 
 function welcomeMessage() {
   console.clear();
+  console.log('');
   asciiArt();
   prompt('Welcome to 21!\n');
-  prompt('The first player or dealer to win 3 rounds will win the match.');
+  prompt('The first player or dealer to win 3 rounds will, win the match.');
   prompt('Press enter to begin.');
   readline.question();
 }
@@ -56,18 +57,14 @@ function initializeScores() {
   return {
     player: 0,
     dealer: 0,
-    tie: 0,
     roundsCompleted: 1,
-    playerMatches: 0,
-    dealerMatches: 0,
-    MatchesPlayed: 1
   };
 }
 
 function createShuffledDeck() {
   let cardsCopy = JSON.parse(JSON.stringify(CARDS));
-
   let playingDeck = Array.from({ length: 4 }, () => cardsCopy).flat();
+
   shuffle(playingDeck);
 
   return playingDeck;
@@ -92,8 +89,12 @@ function dealInitialHand(playerHand, dealerHand, playingDeck) {
   dealCard(dealerHand, playingDeck);
 }
 
-function outputHand(hand) {
+function combineHand(hand) {
   return joinOr(hand.map((card) => card[0]), ', ','and');
+}
+
+function outputPlayerHand(playerHand, playerTotal) {
+  prompt(`You have: ${combineHand(playerHand)} for a total of ${playerTotal}\n`);
 }
 
 function outputDealerFirstCard(dealerHand) {
@@ -125,22 +126,12 @@ function filterAces(hand) {
 function playerTurn(playerHand, playingDeck, dealerHand, scores) {
   let playerTotal = total(playerHand);
 
-  // eslint-disable-next-line max-len
-  playerTotal = playerTurnLoop(playerHand, playingDeck, dealerHand, playerTotal, scores);
-
-  return playerTotal;
-}
-
-// eslint-disable-next-line max-len
-function playerTurnLoop(playerHand, playingDeck, dealerHand, playerTotal, scores) {
   while (true) {
     let answer = getUserInput(playerHand, playerTotal, dealerHand, scores);
 
     playerTotal = playerHit(answer, playerHand, playerTotal, playingDeck);
 
     if (STAY.includes(answer) || busted(playerTotal)) break;
-
-    clearLastLines(4);
   }
   return playerTotal;
 }
@@ -149,8 +140,8 @@ function getUserInput(playerHand, playerTotal, dealerHand, scores) {
   playerInputMessage(playerHand, playerTotal, dealerHand, scores);
   let answer = readline.question().toLowerCase();
 
-  // eslint-disable-next-line max-len
-  answer = playerInputError(answer, playerHand, playerTotal, dealerHand, scores);
+  answer = playerInputError(answer, playerHand, playerTotal, dealerHand,
+    scores);
 
   return answer;
 }
@@ -163,18 +154,18 @@ function playerInputMessage(playerHand, playerTotal, dealerHand, scores) {
   console.clear();
   winCountPrint(scores);
   outputDealerFirstCard(dealerHand);
-  displayCards(playerHand, playerTotal);
+  displayPlayerCards(playerHand, playerTotal);
   prompt("hit or stay? (h/s)");
 }
 
-function displayCards(playerHand, playerTotal) {
+function displayPlayerCards(playerHand, playerTotal) {
   if (playerHand.length > 2) {
     console.log('');
     prompt('You chose to hit!');
-    prompt(`Your cards are now: ${outputHand(playerHand)}`);
+    prompt(`Your cards are now: ${combineHand(playerHand)}`);
     prompt(`Your total is now: ${playerTotal}\n`);
   } else {
-    prompt(`You have: ${outputHand(playerHand)} for a total of ${playerTotal}\n`);
+    outputPlayerHand(playerHand, playerTotal);
   }
 }
 
@@ -199,16 +190,6 @@ function busted(playerTotal) {
   return playerTotal > NUMBER_LIMIT;
 }
 
-function playerBustedMessage(playerHand, playerTotal) {
-  console.log('');
-  promptError(`You busted, your hand of ${outputHand(playerHand)} for a total of ${playerTotal} is greater than ${NUMBER_LIMIT}\n`);
-}
-
-function playerBust(playerHand, playerTotal, scores) {
-  playerBustedMessage(playerHand, playerTotal);
-  updateScores(scores, 'dealer');
-}
-
 function dealerTurn(dealerHand, playingDeck) {
   let dealerTotal = total(dealerHand);
 
@@ -219,42 +200,85 @@ function dealerTurn(dealerHand, playingDeck) {
   return dealerTotal;
 }
 
-// eslint-disable-next-line max-len
-function outputInformation(dealerHand, dealerTotal, playerHand, playerTotal, scores) {
-  console.clear();
-  winCountPrint(scores);
-  prompt(`Dealer has: ${outputHand(dealerHand)} for a total of ${dealerTotal}`);
-  prompt(`You have: ${outputHand(playerHand)} for a total of ${playerTotal}\n`);
+function outputInformation(dealerHand, dealerTotal, playerHand, playerTotal,
+  scores, winner) {
 
-  prompt('You choose to stay\n');
-}
+  if (winner === 'playerBust') {
+    console.clear();
+    winCountPrint(scores);
+    outputDealerFirstCard(dealerHand);
+    outputPlayerHand(playerHand, playerTotal);
 
-function didDealerBust(dealerTotal) {
-  return (dealerTotal > NUMBER_LIMIT);
-}
-
-function dealerBustMessage(dealerTotal, dealerHand) {
-  promptWin(`The dealer has busted with ${outputHand(dealerHand)}, you win with a value of ${dealerTotal}\n`);
-}
-
-function dealerBust(dealerTotal, dealerHand, scores) {
-  dealerBustMessage(dealerTotal, dealerHand);
-  updateScores(scores, 'player');
+  } else {
+    console.clear();
+    winCountPrint(scores);
+    prompt(`Dealer has: ${combineHand(dealerHand)} for a total of ${dealerTotal}`);
+    outputPlayerHand(playerHand, playerTotal);
+  }
 }
 
 function findWinnder(playerTotal, dealerTotal) {
+  if (playerTotal > NUMBER_LIMIT) return 'playerBust';
+
+  if (dealerTotal > NUMBER_LIMIT) return 'dealerBust';
+
   if (playerTotal === dealerTotal) return 'tie';
+
   return (playerTotal > dealerTotal) ? 'player' : 'dealer';
 }
 
-// eslint-disable-next-line max-len
-function displayWinner(playerHand, playerTotal, dealerHand, dealerTotal, winner) {
-  if (winner === 'player') {
-    promptWin(`You won with ${outputHand(playerHand)} for a total of ${playerTotal}\n`);
-  } else if (winner === 'dealer') {
-    promptError(`Dealer won with: ${outputHand(dealerHand)} for a total of ${dealerTotal}\n`);
-  } else {
-    prompt('It is a tie');
+function chooseToStayMessage() {
+  console.log('');
+  prompt('You choose to stay');
+}
+
+function playerBustedMessage(playerHand, playerTotal) {
+  displayPlayerCards(playerHand, playerTotal);
+  promptError(`You busted, your hand of ${combineHand(playerHand)} for a total of ${playerTotal}.\n`);
+}
+
+function dealerBustMessage(dealerTotal, dealerHand) {
+  chooseToStayMessage();
+  console.log('');
+  promptError(`The dealer has busted with ${combineHand(dealerHand)}, with a value of ${dealerTotal}.\n`);
+}
+
+function dealerWinMessage(dealerTotal, dealerHand) {
+  chooseToStayMessage();
+  console.log('');
+  promptError(`Dealer won with: ${combineHand(dealerHand)} for a total of ${dealerTotal}.\n`);
+}
+
+function playerWinMessage(playerHand, playerTotal) {
+  chooseToStayMessage();
+  console.log('');
+  promptWin(`You won with ${combineHand(playerHand)} for a total of ${playerTotal}.\n`);
+}
+
+function tieMessage() {
+  console.log('');
+  prompt('It is a tie');
+}
+
+function displayWinner(playerHand, playerTotal, dealerHand, dealerTotal,
+  winner) {
+
+  switch (winner) {
+    case 'playerBust':
+      playerBustedMessage(playerHand, playerTotal);
+      break;
+    case 'dealerBust':
+      dealerBustMessage(dealerTotal, dealerHand);
+      break;
+    case 'player':
+      playerWinMessage(playerHand, playerTotal);
+      break;
+    case 'dealer':
+      dealerWinMessage(dealerTotal, dealerHand);
+      break;
+    case 'tie':
+      tieMessage();
+      break;
   }
 }
 
@@ -302,13 +326,30 @@ function winCountPrint(scores) {
 }
 
 function updateScores(scores, winner) {
-  scores[winner] += 1;
+  switch (winner) {
+    case 'playerBust':
+      scores.dealer += 1;
+      break;
+    case 'dealerBust':
+      scores.player += 1;
+      break;
+    case 'player':
+      scores.player += 1;
+      break;
+    case 'dealer':
+      scores.dealer += 1;
+      break;
+  }
   scores.roundsCompleted += 1;
 }
 
 function playNextRound() {
   prompt(`Press enter to play next round`);
   readline.question();
+}
+
+function winMatchCheck(scores) {
+  return (scores.player === ROUNDS_WIN) || (scores.dealer === ROUNDS_WIN);
 }
 
 function winMatchMessage(scores) {
@@ -319,32 +360,24 @@ function winMatchMessage(scores) {
   }
 }
 
-function winCheck(scores) {
-  return (scores.player === ROUNDS_WIN) || (scores.dealer === ROUNDS_WIN);
+function thankYouMessage() {
+  console.log('');
+  prompt('Thank you for playing');
 }
 
 function TwentyOneGame(playerHand, dealerHand, playingDeck, scores) {
   dealInitialHand(playerHand, dealerHand, playingDeck);
 
-  let playerTotal = playerTurn(playerHand, playingDeck, dealerHand, scores);
-
-  if (busted(playerTotal)) {
-    playerBust(playerHand, playerTotal, scores);
-    return;
-  }
+  let playerTotal = playerTurn(playerHand, playingDeck, dealerHand,scores);
 
   let dealerTotal = dealerTurn(dealerHand, playingDeck);
-
-  outputInformation(dealerHand, dealerTotal, playerHand, playerTotal, scores);
-
-  if (didDealerBust(dealerTotal)) {
-    dealerBust(dealerTotal, dealerHand, scores);
-    return;
-  }
 
   let winner = findWinnder(playerTotal, dealerTotal);
 
   updateScores(scores, winner);
+
+  outputInformation(dealerHand, dealerTotal,playerHand, playerTotal,
+    scores, winner);
 
   displayWinner(playerHand, playerTotal, dealerHand, dealerTotal, winner);
 }
@@ -358,7 +391,7 @@ function gameLoop(scores) {
 
     TwentyOneGame(playerHand, dealerHand, playingDeck, scores);
 
-    if (winCheck(scores)) break;
+    if (winMatchCheck(scores)) break;
 
     playNextRound();
   }
@@ -377,7 +410,7 @@ function programLoop() {
 
     if (playAgain()) break;
   }
-  prompt('Thank you for playing');
+  thankYouMessage();
 }
 
 programLoop();
