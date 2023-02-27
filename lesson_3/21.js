@@ -347,7 +347,7 @@ function playAgain() {
   let answer = readline.question().toLowerCase();
 
   answer = playAgainError(answer);
-  return (answer[0] !== 'y');
+  return (!['y', 'yes'].includes(answer));
 }
 
 function playAgainMessage () {
