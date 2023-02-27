@@ -334,9 +334,11 @@ function winGameCheck(scores) {
 
 function winGameMessage(scores) {
   if (scores.player === ROUNDS_WIN) {
-    promtWinGame(`You are the first to win ${ROUNDS_WIN} rounds, and have won the game!\n`);
+    promtWinGame(`You are the first to win ${ROUNDS_WIN} rounds, and have won the game!`);
+    console.log('');
   } else if (scores.dealer === ROUNDS_WIN) {
-    promtWinGame(`The Dealer was the first to win ${ROUNDS_WIN} rounds, and has won the game!\n`);
+    promtWinGame(`The Dealer was the first to win ${ROUNDS_WIN} rounds, and has won the game!`);
+    console.log('');
   }
 }
 
@@ -357,11 +359,12 @@ function playAgainErrorMessage() {
 }
 
 function playAgainError(answer) {
-  while (answer !== 'n' && answer !== 'y') {
-    clearLastLines(3);
-    playAgainErrorMessage();
+  clearLastLines(2);
+  while (!['y', 'n', 'yes', 'no'].includes(answer)) {
     playAgainMessage();
+    playAgainErrorMessage();
     answer = readline.question().toLowerCase();
+    clearLastLines(3);
   }
   return answer;
 }
